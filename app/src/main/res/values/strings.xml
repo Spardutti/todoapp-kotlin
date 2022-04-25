@@ -21,4 +21,7 @@
     <string name="pick_a_date">Pick a date</string>
     <string name="add">Add</string>
     <string name="due_date">Due Date</string>
+    <string name="delete_task">delete_task</string>
+    <string name="today_s_tasks">Today\'s Tasks</string>
+    <string name="overdue_tasks">Overdue tasks</string>
 </resources>

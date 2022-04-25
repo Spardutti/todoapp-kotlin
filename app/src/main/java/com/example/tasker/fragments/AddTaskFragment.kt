@@ -11,8 +11,6 @@ import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import com.android.volley.toolbox.JsonObjectRequest
-import com.android.volley.toolbox.Volley
 import com.example.tasker.R
 import com.example.tasker.api.NetworkManager
 import com.example.tasker.categories.CategoriesData
@@ -22,6 +20,7 @@ import com.example.tasker.preferences.Preferences
 import com.example.tasker.tasklist.TaskData
 import org.json.JSONObject
 import java.text.SimpleDateFormat
+import java.time.LocalDate
 import java.util.*
 
 
@@ -31,6 +30,7 @@ class AddTaskFragment : Fragment() {
     lateinit var networkManager: NetworkManager
     private var categoriesList = mutableListOf<CategoriesData>()
     private var categoryId: String = ""
+    lateinit var dateTime: Date
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -44,12 +44,11 @@ class AddTaskFragment : Fragment() {
 
         binding.btnAddTask.setOnClickListener { createTask() }
 
-        val one = CategoriesData("nombre", "123123")
-        val two = CategoriesData("two", "2222")
+        val one = CategoriesData("Please Select a Category", "123123")
         categoriesList.apply {
             add(one)
-            add(two)
         }
+        getUserCategories()
 
         initSpinner()
 
@@ -68,12 +67,19 @@ class AddTaskFragment : Fragment() {
 
         binding.spinnerCategories.onItemSelectedListener = object :
             AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(adapterView: AdapterView<*>?, view: View, i: Int, l: Long) {
+            override fun onItemSelected(
+                adapterView: AdapterView<*>?,
+                view: View?,
+                i: Int,
+                l: Long
+            ) {
+                if (i == 0) binding.spinnerCategories.setSelection(0, false)
                 categoryId = categoriesList[i].id
             }
 
             override fun onNothingSelected(adapterView: AdapterView<*>?) {}
         }
+
     }
 
     //    opens datepicker
@@ -90,12 +96,13 @@ class AddTaskFragment : Fragment() {
         date.set(Calendar.DAY_OF_MONTH, day)
         date.set(Calendar.MONTH, month)
         date.set(Calendar.YEAR, year)
-
+        dateTime = date.time
         binding.editTaskDate.setText(dateFormat.format(date.time))
     }
 
     //    Create Task
     private fun createTask() {
+
         if (
             validate(binding.editTaskName) &&
             validate(binding.editTaskDescription) &&
@@ -104,12 +111,12 @@ class AddTaskFragment : Fragment() {
             val task = TaskData(
                 binding.editTaskName.text.toString(),
                 binding.editTaskDescription.text.toString(),
-                binding.editTaskDate.text.toString(),
-                "62169a8647e84cb4af7f4e9a"
+                dateTime.toString(),
+                categoryId,
+                null,
+                null
             )
-            println(task)
-            networkManager.createTask(requireContext(), parentFragmentManager, task)
-//        volleyPostRequest()
+            networkManager.newTask(task, parentFragmentManager)
         }
     }
 
@@ -122,43 +129,8 @@ class AddTaskFragment : Fragment() {
         }
     }
 
-    // Volley request information
-    private fun volleyPostRequest() {
-        val token = Preferences(requireContext()).getToken()
-
-        val queue = Volley.newRequestQueue(requireContext())
-        val jsonBody = JSONObject().apply {
-            put("todoName", binding.editTaskName.text)
-            put("todoDescription", binding.editTaskDescription.text)
-            put("dueDate", binding.editTaskDate.text)
-            put("categoryId", "62169a8647e84cb4af7f4e9a")
-        }
-        val request = object : JsonObjectRequest(
-            Method.POST, "${Constants.BASE_URL}/newtodo", jsonBody, {
-                onSuccess()
-            }, { error -> println(error) }
-        ) {
-            override fun getHeaders(): Map<String, String> {
-                var params: MutableMap<String, String>? = HashMap()
-                if (params == null) params = HashMap()
-                params["Authorization"] = "Bearer $token"
-                //..add other headers
-                return params
-            }
-        }
-        queue.add(request)
-    }
-
-    // Task created successfully
-    private fun onSuccess() {
-        val homeFragment = HomeFragment()
-        Toast.makeText(requireContext(), "Task Created", Toast.LENGTH_SHORT).show()
-        Handler(Looper.getMainLooper()).postDelayed({
-            parentFragmentManager.beginTransaction().apply {
-                replace(R.id.main_layout, homeFragment)
-                addToBackStack(null)
-                commit()
-            }
-        }, 1500)
+    /* Get user categories to display in dropdown */
+    private fun getUserCategories() {
+        networkManager.getUserCategories(categoriesList, binding)
     }
 }
